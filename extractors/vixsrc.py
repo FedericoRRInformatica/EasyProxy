@@ -1,4 +1,5 @@
 import asyncio
+import html
 import json
 import logging
 import os
@@ -646,8 +647,16 @@ class VixSrcExtractor:
 
         try:
             payload = json.loads(response.text)
-        except json.JSONDecodeError as exc:
-            raise ExtractorError(f"Invalid API response from {api_url}: {exc}")
+        except json.JSONDecodeError:
+            pre_match = re.search(r"<pre[^>]*>(.*?)</pre>", response.text, re.DOTALL)
+            if pre_match:
+                try:
+                    cleaned = html.unescape(pre_match.group(1))
+                    payload = json.loads(cleaned)
+                except json.JSONDecodeError as exc2:
+                    raise ExtractorError(f"Invalid API response from {api_url}: {exc2}")
+            else:
+                raise ExtractorError(f"Invalid API response from {api_url}: response is not JSON")
 
         embed_path = payload.get("src")
         if not embed_path:
