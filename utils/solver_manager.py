@@ -105,6 +105,31 @@ def _my_pid() -> int:
     return os.getpid()
 
 
+def _kill_process_tree(pid: int, sig=signal.SIGKILL):
+    """Uccide un processo e tutti i suoi discendenti (ricorsivo, via /proc)."""
+    try:
+        children = []
+        for entry in os.listdir("/proc"):
+            if entry.isdigit():
+                try:
+                    with open(f"/proc/{entry}/status", "r") as f:
+                        for line in f:
+                            if line.startswith("PPid:"):
+                                if int(line.split()[1]) == pid:
+                                    children.append(int(entry))
+                                break
+                except (FileNotFoundError, ValueError, OSError):
+                    pass
+        for child in children:
+            _kill_process_tree(child, sig)
+        try:
+            os.kill(pid, sig)
+        except (ProcessLookupError, OSError):
+            pass
+    except Exception:
+        pass
+
+
 async def ensure_flaresolverr() -> bool:
     global _flaresolverr_process, _flaresolverr_owner
 
@@ -244,12 +269,11 @@ async def shutdown_flaresolverr():
             pass
     else:
         try:
-            pgid = os.getpgid(pid)
-            os.killpg(pgid, signal.SIGTERM)
+            _kill_process_tree(pid, signal.SIGTERM)
             try:
                 await asyncio.wait_for(proc.wait(), timeout=10)
             except asyncio.TimeoutError:
-                os.killpg(pgid, signal.SIGKILL)
+                _kill_process_tree(pid, signal.SIGKILL)
                 await asyncio.wait_for(proc.wait(), timeout=5)
         except ProcessLookupError:
             pass
