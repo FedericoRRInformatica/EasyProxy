@@ -409,7 +409,8 @@ class HLSProxyCoreMixin:
         _WARP_PROXY_URL = _shared.WARP_PROXY_URL
         result = "Disconnected"
         if _ENABLE_WARP:
-            # Try via SOCKS5 proxy first (wireproxy), fall back to direct (WARP desktop app)
+            warp_ip = None
+            # Try via SOCKS5 proxy first (wireproxy)
             if _WARP_PROXY_URL:
                 try:
                     connector = ProxyConnector.from_url(_WARP_PROXY_URL)
@@ -417,18 +418,24 @@ class HLSProxyCoreMixin:
                         async with session.get("https://api.ipify.org?format=json") as resp:
                             if resp.status == 200:
                                 data = await resp.json()
-                                self._warp_ip = data.get("ip", "")
+                                warp_ip = data.get("ip", "")
+                                self._warp_ip = warp_ip
                                 result = "Connected"
                 except Exception:
                     pass
-            if result != "Connected":
+            # Fallback to direct (WARP desktop app on Windows or system-level WARP)
+            if not warp_ip:
                 try:
                     async with ClientSession(timeout=ClientTimeout(total=5)) as session:
-                        async with session.get("https://api.ipify.org?format=json") as resp:
+                        async with session.get("https://www.cloudflare.com/cdn-cgi/trace") as resp:
                             if resp.status == 200:
-                                data = await resp.json()
-                                self._warp_ip = data.get("ip", "")
-                                result = "Connected"
+                                text = await resp.text()
+                                if "warp=on" in text:
+                                    for line in text.splitlines():
+                                        if line.startswith("ip="):
+                                            self._warp_ip = line.split("=", 1)[1].strip()
+                                            break
+                                    result = "Connected"
                 except Exception:
                     pass
         self._warp_cached = result

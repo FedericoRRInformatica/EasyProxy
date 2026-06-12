@@ -245,7 +245,7 @@ class HLSProxyDashMixin:
                     f"🔐 Auth key headers: Authorization={'***' if headers.get('Authorization') else 'missing'}, X-Channel-Key={headers.get('X-Channel-Key', 'missing')}, X-User-Agent={headers.get('X-User-Agent', 'missing')}"
                 )
 
-            disable_ssl = get_ssl_setting_for_url(key_url, TRANSPORT_ROUTES)
+            disable_ssl = get_ssl_setting_for_url(key_url, _TRANSPORT_ROUTES)
             try:
                 async with session.get(key_url, headers=headers, ssl=not disable_ssl, allow_redirects=False, timeout=15) as resp:
                     if resp.status == 200 or resp.status == 206:
