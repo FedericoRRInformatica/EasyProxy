@@ -86,8 +86,9 @@ RUN chmod +x entrypoint.sh
 
 # 5. Metadata & Ports
 LABEL org.opencontainers.image.title="EasyProxy Monolith"
-LABEL org.opencontainers.image.description="All-in-one HLS Proxy with integrated FlareSolverr v3"
+LABEL org.opencontainers.image.description="All-in-one HLS Proxy with integrated CF Turnstile Solver"
 EXPOSE 7860 8191
+VOLUME ["/data"]
 
 # 6. Execution
 ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
